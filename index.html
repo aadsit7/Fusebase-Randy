@@ -547,12 +547,16 @@
         'thefusebase.com'
       ];
 
-      // Domains that shipped in an earlier default by mistake (Randy is a
-      // FuseBase assistant, not a Microsoft one) and must be scrubbed from any
-      // persisted Settings so returning users stop researching and citing the
-      // wrong support site. Mirrors the LEGACY_PROMPT_MARKERS pattern below.
+      // Domains that shipped in earlier defaults (this assistant was rebranded
+      // from a Recast Software / Microsoft endpoint-management tool, so older
+      // builds researched Recast and Microsoft docs) and must be scrubbed from
+      // any persisted Settings so returning users stop researching and citing
+      // the wrong support site. Listed as root domains — subdomains and doc
+      // paths (docs.recastsoftware.com, recastsoftware.com/guides) are matched
+      // too. Mirrors the LEGACY_PROMPT_MARKERS pattern below.
       const LEGACY_RESEARCH_DOMAINS = [
-        'learn.microsoft.com'
+        'learn.microsoft.com',
+        'recastsoftware.com'
       ];
 
       // Technical-assist tuning.
@@ -1106,8 +1110,14 @@
                 .filter(x => typeof x === 'string' && x.trim())
                 .map(x => x.trim())
                 .filter(x => {
-                  const lc = x.toLowerCase();
-                  return !LEGACY_RESEARCH_DOMAINS.some(bad => lc === bad || lc.startsWith(bad + '/'));
+                  // Compare on the hostname only (drop any path/query) so a
+                  // legacy root also scrubs its subdomains and doc paths —
+                  // e.g. "docs.recastsoftware.com" and
+                  // "recastsoftware.com/guides" both match "recastsoftware.com".
+                  const host = x.toLowerCase().split(/[\/?#]/)[0];
+                  return !LEGACY_RESEARCH_DOMAINS.some(
+                    bad => host === bad || host.endsWith('.' + bad)
+                  );
                 });
               s.allowedDomains = cleaned.length ? cleaned : DEFAULT_RESEARCH_DOMAINS.slice();
             }
