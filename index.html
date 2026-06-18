@@ -537,10 +537,21 @@
       const SEARCH_TOOL = 'web_search_20250305';
 
       // Support-doc domains Randy researches in technical-assist mode.
-      // Editable in Settings; one domain per line there.
+      // Editable in Settings; one domain per line there. Randy is a FuseBase
+      // assistant, so research and the citations shown under each answer stay
+      // on the official FuseBase support site — the guides at
+      // thefusebase.com/guides and the product pages at thefusebase.com — and
+      // nowhere else.
       const DEFAULT_RESEARCH_DOMAINS = [
         'thefusebase.com/guides',
-        'thefusebase.com',
+        'thefusebase.com'
+      ];
+
+      // Domains that shipped in an earlier default by mistake (Randy is a
+      // FuseBase assistant, not a Microsoft one) and must be scrubbed from any
+      // persisted Settings so returning users stop researching and citing the
+      // wrong support site. Mirrors the LEGACY_PROMPT_MARKERS pattern below.
+      const LEGACY_RESEARCH_DOMAINS = [
         'learn.microsoft.com'
       ];
 
@@ -1086,7 +1097,19 @@
             s.speakAnswers = !!(d.speakAnswers !== undefined ? d.speakAnswers : d.speakResponses);
             if (d.audioMode === 'one-way' || d.audioMode === 'two-way') s.audioMode = d.audioMode;
             if (Array.isArray(d.allowedDomains)) {
-              s.allowedDomains = d.allowedDomains.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim());
+              // Keep non-empty strings, then drop any legacy off-brand domain
+              // shipped by an older default so returning users stop researching
+              // (and citing) the wrong support site. If scrubbing empties the
+              // list, fall back to the FuseBase defaults rather than silently
+              // re-opening the whole web.
+              const cleaned = d.allowedDomains
+                .filter(x => typeof x === 'string' && x.trim())
+                .map(x => x.trim())
+                .filter(x => {
+                  const lc = x.toLowerCase();
+                  return !LEGACY_RESEARCH_DOMAINS.some(bad => lc === bad || lc.startsWith(bad + '/'));
+                });
+              s.allowedDomains = cleaned.length ? cleaned : DEFAULT_RESEARCH_DOMAINS.slice();
             }
           });
         } catch {}
