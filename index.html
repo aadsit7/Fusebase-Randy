@@ -733,7 +733,7 @@
 
       // Safety net when the classifier service is unreachable: obvious
       // technical questions still get answered.
-      const TECH_TOPIC_RE = /\b(recast|liquit|application workspace|right.?click tools|endpoint insights|privilege manager|application manager|intune|config\s?manager|configmgr|sccm|mecm|autopilot|co.?management|gpo|group policy|hybrid join|win32|msi|packag(?:e|ing)|app (?:deploy|delivery|catalog)|self.?service|patch(?:ing|es)?|third.?party|mdm|endpoint)\b/i;
+      const TECH_TOPIC_RE = /\b(fuse\s?base|client portals?|deal rooms?|(?:partner|vendor|partner\s*(?:&|and)\s*vendor)\s*portals?|onboarding portals?|knowledge ?base|ai agents?|project management|internal workspace|portals?|white[\s-]?label(?:ing|ed)?|custom domains?|cname|magic links?|single sign[\s-]?on|sso|permissions?|roles?|automations?|integrations?|client collaboration|self[\s-]?service)\b/i;
       const QUESTIONISH_RE = /\?|\b(how|what|why|when|where|which|who|can|could|does|do(?:es)?n.?t|did|is|are|will|would|should)\b[\s\S]{3,}|^(walk me through|tell me|explain|show me)/i;
       // Statement-form technical needs: a problem/goal/pain marker near an
       // in-scope topic ("we keep struggling with third-party patching", "no
@@ -754,43 +754,36 @@
       }
 
       // Commercial / non-technical asks an SE shouldn't auto-answer on a live
-      // call even when they name an in-scope product ("what's Application
-      // Workspace cost per seat?"). These bypass the no-classifier fast path
+      // call even when they name an in-scope product ("what's Client Portals
+      // cost per seat?"). These bypass the no-classifier fast path
       // and fall through to the classifier, which already treats pricing,
       // contracts, and scheduling as out of scope. The guard only ever ADDS a
       // classifier round-trip — it never drops a question on its own.
       const OUT_OF_SCOPE_RE = /\bhow much (?:do(?:es)?|is|are|would|will)\b|\b(pric(?:e|ing|ed)|quote|discount|per[\s-]?(?:seat|device|user)|license(?:s|ing)? (?:cost|fee|price|pricing)|renewal|contract|invoice|proposal|budget|sales ?rep|account (?:manager|exec))\b/i;
 
-      // Common speech-to-text garbles of endpoint-management product names.
-      // Applied to overheard utterances before they're classified, answered,
-      // and logged, so Randy reasons over "Intune", not "in tune", and the
-      // tech-topic detector and saved Q&A read cleanly. Kept tight: each
-      // pattern targets a phrase that is overwhelmingly the product on these
-      // calls. Correction never feeds the no-classifier fast path (that still
-      // runs on the raw text), so a wrong guess can only route to the
-      // classifier — it can never auto-answer on its own.
+      // Common speech-to-text garbles of FuseBase product names. Applied to
+      // overheard utterances before they're classified, answered, and logged,
+      // so Randy reasons over "FuseBase", not "few space", and the tech-topic
+      // detector and saved Q&A read cleanly. Kept tight: each pattern targets
+      // a phrase that is overwhelmingly the product on these calls. Correction
+      // never feeds the no-classifier fast path (that still runs on the raw
+      // text), so a wrong guess can only route to the classifier — it can
+      // never auto-answer on its own.
       const TRANSCRIPT_FIXES = [
-        [/\bin\s?tune\b/gi, 'Intune'],
-        [/\bintunes\b/gi, 'Intune'],
-        [/\bend[\s-]?point(s)?\b/gi, 'endpoint$1'],
-        [/\bauto[\s-]?pilot\b/gi, 'Autopilot'],
-        [/\bco[\s-]?management\b/gi, 'co-management'],
-        [/\bconfig(?:uration)?[\s-]?manager\b/gi, 'ConfigMgr'],
-        [/\bconfig\s?mgr\b/gi, 'ConfigMgr'],
-        [/\bs\.?c\.?c\.?m\.?\b/gi, 'SCCM'],
-        [/\bm\.?e\.?c\.?m\.?\b/gi, 'MECM'],
-        [/\bright[\s-]?click tools\b/gi, 'Right Click Tools'],
-        [/\bapp(?:lication)? workspace\b/gi, 'Application Workspace'],
-        [/\bapplication manager\b/gi, 'Application Manager'],
-        [/\bprivilege manager\b/gi, 'Privilege Manager'],
-        [/\bendpoint insights\b/gi, 'Endpoint Insights'],
-        [/\bliqu(?:id|it|ot)\b/gi, 'Liquit'],
-        [/\bre[\s-]?cast\b/gi, 'Recast'],
-        [/\bpower\s?shell\b/gi, 'PowerShell'],
-        [/\bwin\s?32\b/gi, 'Win32'],
-        [/\bazure a\.?\s?d\.?\b/gi, 'Azure AD'],
-        [/\bgroup polic(y|ies)\b/gi, 'Group Polic$1'],
-        [/\bhybrid[\s-]?join(ed)?\b/gi, 'hybrid join$1']
+        [/\b(?:fuse[\s-]?base|fuse[\s-]?based|few[\s-]?space)\b/gi, 'FuseBase'],
+        [/\bclient portal(s)?\b/gi, 'Client Portal$1'],
+        [/\bdeal room(s)?\b/gi, 'Deal Room$1'],
+        [/\bonboarding portal(s)?\b/gi, 'Onboarding Portal$1'],
+        [/\bpartner portal(s)?\b/gi, 'Partner Portal$1'],
+        [/\bvendor portal(s)?\b/gi, 'Vendor Portal$1'],
+        [/\bknowledge[\s-]?base(s)?\b/gi, 'Knowledge Base$1'],
+        [/\ba\.?\s?i\.? agent(s)?\b/gi, 'AI agent$1'],
+        [/\bproject management\b/gi, 'Project Management'],
+        [/\binternal workspace\b/gi, 'Internal Workspace'],
+        [/\bwhite[\s-]?label(ed|ing)?\b/gi, 'white-label$1'],
+        [/\bcustom domain(s)?\b/gi, 'custom domain$1'],
+        [/\b(?:c[\s-]?name|see[\s-]?name)\b/gi, 'CNAME'],
+        [/\bmagic link(s)?\b/gi, 'magic link$1']
       ];
       function correctTranscript(text) {
         let t = String(text || '');
@@ -800,7 +793,7 @@
 
       // Voice turns attach the (slower) web_search tool only when the prompt
       // clearly benefits from live data or product facts.
-      const WEB_SEARCH_HINT_RE = /\b(search|look ?up|latest|news|today|right now|current|price of|weather|stock|score|who won|breaking|recast|liquit|workspace|intune|configmgr|sccm|mecm|right click)\b/i;
+      const WEB_SEARCH_HINT_RE = /\b(search|look ?up|latest|news|today|right now|current|price of|breaking|fuse\s?base|client portals?|deal rooms?|knowledge ?base|ai agents?|onboarding portals?|(?:partner|vendor) portals?|white[\s-]?label|custom domains?|cname|magic links?|integrations?|automations?)\b/i;
 
       /* ================================================================
        * ENDPOINT + STORAGE KEYS
